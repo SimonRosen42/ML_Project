@@ -10,7 +10,7 @@ from math import exp
 import pandas as pd
 import re
 import csv
-from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.model_selection import train_test_split
 
 dataset = pd.read_csv('convertfull.csv')
@@ -33,7 +33,7 @@ def preprocess_reviews(reviews):
 x_train_clean = preprocess_reviews(x_train)
 x_test_clean = preprocess_reviews(x_test)
 
-vectorizer = CountVectorizer(binary=True, analyzer='word')
+vectorizer = TfidfVectorizer(analyzer='word',smooth_idf=True)
 train_features = vectorizer.fit_transform(x_train_clean)
 test_features = vectorizer.transform(x_test_clean)
 
@@ -44,7 +44,7 @@ X_test = pd.DataFrame(test_features.toarray())
 print(X_test.shape)
 
 class LogisticRegression:
-    def __init__(self, lr=0.1, num_iter=1000, fit_intercept=True, verbose=False):
+    def __init__(self, lr=0.5, num_iter=1000, fit_intercept=True, verbose=False):
         self.lr = lr
         self.num_iter = num_iter
         self.fit_intercept = fit_intercept
@@ -92,6 +92,7 @@ for x in range(X_test.shape[0]):
        p.append(1)
     else:
        p.append(0)
+
 ################PREDICTIONS##############
 with open('predicted.csv', 'w') as csvFile:
     writer = csv.writer(csvFile)
@@ -99,25 +100,8 @@ with open('predicted.csv', 'w') as csvFile:
         writer.writerow([a])
 
 csvFile.close()
-
-prob = model.predict_prob(X_test)
-############PROBABILITIES###############
-with open('person1.csv', 'w') as csvFile:
-    writer = csv.writer(csvFile)
-    for b in prob:
-        writer.writerow([b])
-
-csvFile.close()
-
-thetha = model.theta
-##############THETA VALUES##############
-with open('person2.csv', 'w') as csvFile:
-    writer = csv.writer(csvFile)
-    for c in thetha:
-        writer.writerow([b])
-
-csvFile.close()
 '''
+
 def getfile(filename,results):
    f = open(filename)
    filecontents = f.readlines()
@@ -134,9 +118,9 @@ y1_test=np.array(y_test)
 from sklearn.metrics import accuracy_score
 from sklearn.metrics import confusion_matrix
 
-print ("Accuracy : ", accuracy_score(y_test,predicted)*100)
+print ("Accuracy : ", accuracy_score(y1_test,predicted)*100)
 
-print("Confusion Matrix: ",confusion_matrix(y_test, predicted))
+print("Confusion Matrix: ",confusion_matrix(y1_test, predicted))
 
 tp = fp = 0
 # tp -> True Positive, fp -> False Positive
