@@ -18,8 +18,7 @@ dataset = pd.read_csv('convertfull.csv')
 
 x_train, x_test, y_train, y_test = train_test_split(dataset['headline'], dataset['is_sarcastic'], test_size=0.2, random_state = 100)
 
-#y_train = dataset['is_sarcastic']
-#y_test = d['is_sarcastic']
+x_Train, x_val, y_Train, y_val = train_test_split(x_train, y_train, test_size=0.2, random_state = 100)
    
 REPLACE_NO_SPACE = re.compile("[.;:!\'?,\"()\[\]]")
 REPLACE_WITH_SPACE = re.compile("[-]")
@@ -30,16 +29,20 @@ def preprocess_reviews(reviews):
     
     return reviews
 
-x_train_clean = preprocess_reviews(x_train)
+x_train_clean = preprocess_reviews(x_Train)
+x_val_clean = preprocess_reviews(x_val)
 x_test_clean = preprocess_reviews(x_test)
 
 vectorizer = TfidfVectorizer(analyzer='word',smooth_idf=True)
 train_features = vectorizer.fit_transform(x_train_clean)
+val_features = vectorizer.transform(x_val_clean)
 test_features = vectorizer.transform(x_test_clean)
 
 
 X_train = pd.DataFrame(train_features.toarray())
 print(X_train.shape)
+X_val = pd.DataFrame(val_features.toarray())
+print(X_val.shape)
 X_test = pd.DataFrame(test_features.toarray())
 print(X_test.shape)
 
@@ -80,10 +83,15 @@ class LogisticRegression:
             h = self.__sigmoid(z)
             gradient = np.dot(X.T, (h - y)) / y.size
             self.theta -= self.lr * gradient
+            
+            if(self.verbose == True and i % 100 == 0):
+                    z = np.dot(X, self.theta)
+                    h = self.__sigmoid(z)
+                    print(f'loss: {self.__loss(h, y)} \t')
     
 '''
 model = LogisticRegression(lr=0.5, num_iter=10000)
-model.fit2(X_train, y_train)
+model.fit2(X_train, y_Train)
 p=[]
 preds = model.predict(X_test, 0.5)
 
@@ -94,14 +102,14 @@ for x in range(X_test.shape[0]):
        p.append(0)
 
 ################PREDICTIONS##############
-with open('predicted.csv', 'w') as csvFile:
+with open('prediction.csv', 'w') as csvFile:
     writer = csv.writer(csvFile)
     for a in p:
         writer.writerow([a])
 
 csvFile.close()
-'''
 
+'''
 def getfile(filename,results):
    f = open(filename)
    filecontents = f.readlines()
@@ -118,85 +126,16 @@ y1_test=np.array(y_test)
 from sklearn.metrics import accuracy_score
 from sklearn.metrics import confusion_matrix
 
-print ("Accuracy : ", accuracy_score(y1_test,predicted)*100)
+print("Confusion Matrix: ",confusion_matrix(y_test, predicted))
 
-print("Confusion Matrix: ",confusion_matrix(y1_test, predicted))
+print ("Accuracy : ", accuracy_score(y_test,predicted))
 
-tp = fp = 0
-# tp -> True Positive, fp -> False Positive
-for i in range(0, len(predicted)-1):
-    if predicted[i] == y1_test[i] == 0:
-        tp = tp + 1
-    elif predicted[i] == 0 and y1_test[i] == 1:
-        fp = fp + 1
-precision = tp/(tp + fp)
+from sklearn.metrics import recall_score
 
-fn = 0
-# fn -> False Negatives
-for i in range(0, len(predicted)-1):
-    if predicted[i] == 1 and y1_test[i] == 0:
-        fn = fn + 1
-recall = tp/(tp + fn)
+print("Recall: ",recall_score(y_test, predicted) )
 
-tn = 0
-# tn -> True Negative
-for i in range(0, len(predicted)-1):
-    if predicted[i] == y1_test[i] == 1:
-        tn = tn + 1
-        
-print("Precision: ",precision)
+from sklearn.metrics import precision_score
+print("Precision: ", precision_score(y_test, predicted))
 
-import matplotlib.pyplot as plt
-import itertools
-
-cm = np.array([[tp, fn], [fp, tn]])
-
-def plot_confusion_matrix(cm, classes,normalize=False,title='Confusion matrix',cmap=plt.cm.Blues):
-    """
-    This function prints and plots the confusion matrix.
-    Normalization can be applied by setting `normalize=True`.
-    """
-    if normalize:
-        cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
-        print("Normalized confusion matrix")
-        print(cm)
-        plt.imshow(cm, interpolation='nearest', cmap=cmap)
-        plt.title(title)
-        plt.colorbar()
-        tick_marks = np.arange(len(classes))
-        plt.xticks(tick_marks, classes, rotation=45)
-        plt.yticks(tick_marks, classes)
-        fmt = '.2f' if normalize else 'd'
-        thresh = cm.max() / 2.
-        for i, j in itertools.product(range(cm.shape[0]), range(cm.shape[1])):
-                plt.text(j, i, format(cm[i, j], fmt),
-                         horizontalalignment="center",
-                         color="white" if cm[i, j] > thresh else "black")
-        plt.tight_layout()
-        plt.ylabel('True label')
-        plt.xlabel('Predicted label')
-        plt.figure()
-    else:
-        print('Confusion matrix, without normalization')
-        print(cm)
-        plt.imshow(cm, interpolation='nearest', cmap=cmap)
-        plt.title(title)
-        plt.colorbar()
-        tick_marks = np.arange(len(classes))
-        plt.xticks(tick_marks, classes, rotation=45)
-        plt.yticks(tick_marks, classes)
-        fmt = '.2f' if normalize else 'd'
-        thresh = cm.max() / 2.
-        for i, j in itertools.product(range(cm.shape[0]), range(cm.shape[1])):
-                plt.text(j, i, format(cm[i, j], fmt),
-                         horizontalalignment="center",
-                         color="white" if cm[i, j] > thresh else "black")
-        plt.tight_layout()
-        plt.ylabel('True label')
-        plt.xlabel('Predicted label')
-        plt.figure()
-
-# Un-Normalized Confusion Matrix...
-plot_confusion_matrix(cm, classes=[0,1], normalize=False, title='Unnormalized Confusion Matrix')
-# Normalized Confusion Matrix...
-plot_confusion_matrix(cm, classes=[0,1], normalize=True, title='Normalized Confusion Matrix')
+from sklearn.metrics import f1_score
+print("f1_score: ", f1_score(y_test,predicted))
